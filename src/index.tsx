@@ -149,6 +149,101 @@ app.openapi(part05Route, (c) => {
   )
 })
 
+// /part-06: File upload with multipart/form-data
+const part06Route = createRoute({
+  method: 'post',
+  path: '/part-06',
+  request: {
+    body: {
+      content: {
+        'multipart/form-data': {
+          schema: z.object({
+            file: z.instanceof(File).openapi({
+              type: 'string',
+              format: 'binary',
+              description: 'アップロードするファイル',
+            }),
+            description: z.string().optional().openapi({
+              description: 'ファイルの説明（オプション）',
+            }),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            message: z.string(),
+            fileInfo: z.object({
+              name: z.string(),
+              size: z.number(),
+              type: z.string(),
+              description: z.string().optional(),
+            }),
+          }),
+        },
+      },
+      description: 'ファイルアップロード成功',
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            error: z.string(),
+          }),
+        },
+      },
+      description: 'バリデーションエラー',
+    },
+  },
+})
+
+app.openapi(part06Route, async (c) => {
+  const body = await c.req.parseBody()
+  const file = body.file as File
+  const description = body.description
+
+  console.table({
+    file: {
+      name: file?.name,
+      size: file?.size,
+      type: file?.type,
+    },
+    description: {
+      value: description || 'なし',
+    },
+  })
+
+  if (!file) {
+    return c.json(
+      {
+        success: false,
+        error: 'ファイルが指定されていません',
+      },
+      400
+    )
+  }
+
+  return c.json(
+    {
+      success: true,
+      message: 'ファイルアップロード成功',
+      fileInfo: {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        description: description || undefined,
+      },
+    },
+    200
+  )
+})
+
 // OpenAPI documentation
 app.doc('/doc', {
   openapi: '3.0.0',
