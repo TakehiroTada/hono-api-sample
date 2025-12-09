@@ -1,7 +1,7 @@
-import { serve } from '@hono/node-server'
-import { swaggerUI } from '@hono/swagger-ui'
-import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { jsxRenderer } from 'hono/jsx-renderer'
+import { serve } from '@hono/node-server';
+import { swaggerUI } from '@hono/swagger-ui';
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
+import { jsxRenderer } from 'hono/jsx-renderer';
 
 const app = new OpenAPIHono({
   defaultHook: (result, c) => {
@@ -10,13 +10,13 @@ const app = new OpenAPIHono({
         {
           success: false,
           error: 'バリデーションエラー',
-          details: result.error.flatten(),
+          details: result.error.issues,
         },
-        400
-      )
+        400,
+      );
     }
   },
-})
+});
 
 // JSX Renderer middleware
 app.use(
@@ -29,34 +29,34 @@ app.use(
         </head>
         <body>{children}</body>
       </html>
-    )
-  })
-)
+    );
+  }),
+);
 
 // /part-01: JSON response
 app.get('/part-01', (c) => {
-  return c.json({ message: 'hello' })
-})
+  return c.json({ message: 'hello' });
+});
 
 // /part-02: HTML response
 app.get('/part-02', (c) => {
-  return c.html('<html><body>hello</body></html>')
-})
+  return c.html('<html lang="ja"><body>hello</body></html>');
+});
 
 // /part-03: CSV response
 app.get('/part-03', (c) => {
   const csv = `"たいとる","ぼでぃー","あいうえお"
-aaa,bbb,ccc`
+aaa,bbb,ccc`;
 
   return c.text(csv, 200, {
     'Content-Type': 'text/csv',
     'Content-Disposition': 'attachment; filename="data.csv"',
-  })
-})
+  });
+});
 
 // /part-04: JSX response
 app.get('/part-04', (c) => {
-  const randomNumber = Math.floor(Math.random() * 1000)
+  const randomNumber = Math.floor(Math.random() * 1000);
 
   return c.render(
     <div>
@@ -71,9 +71,9 @@ app.get('/part-04', (c) => {
         <li>Item 3</li>
       </ul>
       <a href="/">ホームに戻る</a>
-    </div>
-  )
-})
+    </div>,
+  );
+});
 
 // /part-05: Zod OpenAPI validation sample
 const part05Route = createRoute({
@@ -88,10 +88,15 @@ const part05Route = createRoute({
               example: '太郎',
               description: 'ユーザー名',
             }),
-            email: z.string().email().openapi({
-              example: 'taro@example.com',
-              description: 'メールアドレス',
-            }),
+            email: z
+              .string()
+              .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
+                message: 'メールアドレスが不正です',
+              })
+              .openapi({
+                example: 'taro@example.com',
+                description: 'メールアドレス',
+              }),
             age: z.number().int().min(0).max(150).openapi({
               example: 25,
               description: '年齢',
@@ -130,10 +135,10 @@ const part05Route = createRoute({
       description: 'バリデーションエラー',
     },
   },
-})
+});
 
 app.openapi(part05Route, (c) => {
-  const { name, email, age } = c.req.valid('json')
+  const { name, email, age } = c.req.valid('json');
 
   return c.json(
     {
@@ -145,9 +150,9 @@ app.openapi(part05Route, (c) => {
         age,
       },
     },
-    200
-  )
-})
+    200,
+  );
+});
 
 // /part-06: File upload with multipart/form-data
 const part06Route = createRoute({
@@ -201,12 +206,12 @@ const part06Route = createRoute({
       description: 'バリデーションエラー',
     },
   },
-})
+});
 
 app.openapi(part06Route, async (c) => {
-  const body = await c.req.parseBody()
-  const file = body.file as File
-  const description = body.description
+  const body = await c.req.parseBody();
+  const file = body.file as File;
+  const description = body.description as string;
 
   console.table({
     file: {
@@ -217,7 +222,7 @@ app.openapi(part06Route, async (c) => {
     description: {
       value: description || 'なし',
     },
-  })
+  });
 
   if (!file) {
     return c.json(
@@ -225,8 +230,8 @@ app.openapi(part06Route, async (c) => {
         success: false,
         error: 'ファイルが指定されていません',
       },
-      400
-    )
+      400,
+    );
   }
 
   return c.json(
@@ -237,12 +242,12 @@ app.openapi(part06Route, async (c) => {
         name: file.name,
         size: file.size,
         type: file.type,
-        description: description || undefined,
+        description: description ?? '',
       },
     },
-    200
-  )
-})
+    200,
+  );
+});
 
 // OpenAPI documentation
 app.doc('/doc', {
@@ -252,15 +257,15 @@ app.doc('/doc', {
     title: 'Hono API Sample',
     description: 'HonoフレームワークのAPIサンプル',
   },
-})
+});
 
 // Swagger UI
-app.get('/docs', swaggerUI({ url: '/doc' }))
+app.get('/docs', swaggerUI({ url: '/doc' }));
 
-const port = 3000
-console.info(`Server is running on http://localhost:${port}`)
+const port = 3000;
+console.info(`Server is running on http://localhost:${port}`);
 
 serve({
   fetch: app.fetch,
   port,
-})
+});
